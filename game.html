@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Selfie</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+        }
+
+        h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        p {
+            font-size: 20px;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        #videoContainer {
+            display: none;
+            margin: 30px 0;
+        }
+
+        video {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 15px;
+            border: 4px solid white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        canvas {
+            display: none;
+        }
+
+        button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 18px 40px;
+            font-size: 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #preview {
+            display: none;
+            margin: 20px 0;
+        }
+
+        #previewImage {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 4px solid white;
+            object-fit: cover;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .emoji {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="emoji">🐦📸</div>
+        <h1>Flappy Selfie!</h1>
+        <p>Take a selfie and become the bird in Flappy Bird!</p>
+        
+        <div class="instructions">
+            <p>Click the button below to access your camera and take a selfie. Your face will replace the bird in the game!</p>
+        </div>
+
+        <button id="startCamera">📷 Take Selfie</button>
+        
+        <div id="videoContainer">
+            <video id="video" autoplay playsinline></video>
+            <br>
+            <button id="captureBtn">📸 Capture Photo</button>
+            <button id="retakeBtn" style="display: none;">🔄 Retake</button>
+        </div>
+
+        <canvas id="canvas"></canvas>
+
+        <div id="preview">
+            <p style="margin-bottom: 15px;">Your Flappy Face:</p>
+            <img id="previewImage" alt="Your selfie">
+            <br><br>
+            <button id="playBtn">🎮 Play Game!</button>
+        </div>
+    </div>
+
+    <script>
+        const startCameraBtn = document.getElementById('startCamera');
+        const videoContainer = document.getElementById('videoContainer');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const captureBtn = document.getElementById('captureBtn');
+        const retakeBtn = document.getElementById('retakeBtn');
+        const preview = document.getElementById('preview');
+        const previewImage = document.getElementById('previewImage');
+        const playBtn = document.getElementById('playBtn');
+
+        let stream = null;
+
+        startCameraBtn.addEventListener('click', async () => {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: 640, 
+                        height: 480,
+                        facingMode: 'user'
+                    } 
+                });
+                video.srcObject = stream;
+                videoContainer.style.display = 'block';
+                startCameraBtn.style.display = 'none';
+            } catch (err) {
+                alert('Could not access camera. Please make sure you granted camera permissions!');
+                console.error('Camera error:', err);
+            }
+        });
+
+        captureBtn.addEventListener('click', () => {
+            // Set canvas size to match video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw video frame to canvas
+            ctx.drawImage(video, 0, 0);
+
+            // Get image data
+            const imageData = canvas.toDataURL('image/png');
+
+            // Show preview
+            previewImage.src = imageData;
+            preview.style.display = 'block';
+
+            // Hide video, show retake button
+            videoContainer.style.display = 'none';
+            retakeBtn.style.display = 'inline-block';
+
+            // Store image in localStorage for game to use
+            localStorage.setItem('flappySelfie', imageData);
+
+            // Stop camera
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        retakeBtn.addEventListener('click', async () => {
+            preview.style.display = 'none';
+            retakeBtn.style.display = 'none';
+            
+            // Restart camera
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: 640, 
+                        height: 480,
+                        facingMode: 'user'
+                    } 
+                });
+                video.srcObject = stream;
+                videoContainer.style.display = 'block';
+            } catch (err) {
+                alert('Could not access camera.');
+                console.error('Camera error:', err);
+            }
+        });
+
+        playBtn.addEventListener('click', () => {
+            window.location.href = 'game.html';
+        });
+    </script>
+</body>
+</html>

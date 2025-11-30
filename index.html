@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flappy Bird</title>
+    <title>Flappy Selfie Game</title>
     <style>
         body {
             margin: 0;
@@ -37,9 +37,26 @@
             font-size: 18px;
             margin-top: 10px;
         }
+        #backBtn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        #backBtn:hover {
+            background: white;
+        }
     </style>
 </head>
 <body>
+    <button id="backBtn" onclick="window.location.href='index.html'">← Back</button>
     <div id="gameInfo">
         <div id="score">0</div>
         <div id="instructions">Press SPACE or Click to Flap</div>
@@ -52,12 +69,23 @@
         const scoreDisplay = document.getElementById('score');
         const instructionsDisplay = document.getElementById('instructions');
 
+        // Load selfie image
+        const selfieData = localStorage.getItem('flappySelfie');
+        const selfieImage = new Image();
+        let imageLoaded = false;
+
+        if (selfieData) {
+            selfieImage.onload = () => {
+                imageLoaded = true;
+            };
+            selfieImage.src = selfieData;
+        }
+
         // Game variables
         let bird = {
             x: 150,
             y: 250,
-            width: 50,
-            height: 36,
+            size: 50, // Size for circular selfie
             gravity: 0.6,
             velocity: 0,
             jump: -10
@@ -70,11 +98,10 @@
         let frameCount = 0;
 
         const pipeWidth = 80;
-        const pipeGap = 180;
+        const pipeGap = 200;
         const pipeSpeed = 2;
 
         // Colors
-        const birdColor = '#FFD700';
         const pipeColor = '#6ab04c';
         const pipeBorder = '#4a7c3a';
 
@@ -92,20 +119,43 @@
             });
         }
 
-        // Draw bird
+        // Draw bird (with selfie or default)
         function drawBird() {
-            ctx.fillStyle = birdColor;
-            ctx.fillRect(bird.x, bird.y, bird.width, bird.height);
+            ctx.save();
             
-            // Eye
-            ctx.fillStyle = 'white';
-            ctx.fillRect(bird.x + 30, bird.y + 8, 12, 12);
-            ctx.fillStyle = 'black';
-            ctx.fillRect(bird.x + 34, bird.y + 11, 6, 6);
-            
-            // Beak
-            ctx.fillStyle = '#FF6347';
-            ctx.fillRect(bird.x + 50, bird.y + 15, 9, 6);
+            if (imageLoaded) {
+                // Draw circular selfie
+                ctx.beginPath();
+                ctx.arc(bird.x + bird.size/2, bird.y + bird.size/2, bird.size/2, 0, Math.PI * 2);
+                ctx.closePath();
+                ctx.clip();
+                
+                // Draw the selfie image
+                ctx.drawImage(selfieImage, bird.x, bird.y, bird.size, bird.size);
+                
+                ctx.restore();
+                
+                // Draw border around selfie
+                ctx.beginPath();
+                ctx.arc(bird.x + bird.size/2, bird.y + bird.size/2, bird.size/2, 0, Math.PI * 2);
+                ctx.strokeStyle = '#FFD700';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            } else {
+                // Fallback to default bird
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(bird.x, bird.y, bird.size, bird.size * 0.7);
+                
+                // Eye
+                ctx.fillStyle = 'white';
+                ctx.fillRect(bird.x + 30, bird.y + 8, 12, 12);
+                ctx.fillStyle = 'black';
+                ctx.fillRect(bird.x + 34, bird.y + 11, 6, 6);
+                
+                // Beak
+                ctx.fillStyle = '#FF6347';
+                ctx.fillRect(bird.x + 50, bird.y + 15, 9, 6);
+            }
         }
 
         // Draw pipes
@@ -170,18 +220,22 @@
                 createPipe();
             }
 
-            // Check collisions
+            // Check collisions (circular collision for selfie)
             pipes.forEach(pipe => {
-                // Hit pipe
-                if (bird.x + bird.width > pipe.x && bird.x < pipe.x + pipeWidth) {
-                    if (bird.y < pipe.top || bird.y + bird.height > pipe.bottom) {
+                const birdCenterX = bird.x + bird.size / 2;
+                const birdCenterY = bird.y + bird.size / 2;
+                const birdRadius = bird.size / 2;
+
+                // Check if bird circle overlaps with pipe rectangle
+                if (birdCenterX + birdRadius > pipe.x && birdCenterX - birdRadius < pipe.x + pipeWidth) {
+                    if (birdCenterY - birdRadius < pipe.top || birdCenterY + birdRadius > pipe.bottom) {
                         endGame();
                     }
                 }
             });
 
             // Hit ground or ceiling
-            if (bird.y + bird.height > canvas.height - 50 || bird.y < 0) {
+            if (bird.y + bird.size > canvas.height - 50 || bird.y < 0) {
                 endGame();
             }
 
@@ -221,7 +275,7 @@
                 ctx.fillStyle = 'white';
                 ctx.font = 'bold 36px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText('FLAPPY BIRD', canvas.width / 2, canvas.height / 2 - 50);
+                ctx.fillText('FLAPPY SELFIE', canvas.width / 2, canvas.height / 2 - 50);
                 
                 ctx.font = '20px Arial';
                 ctx.fillText('Press SPACE or Click to Start', canvas.width / 2, canvas.height / 2 + 20);
@@ -275,6 +329,12 @@
         });
 
         canvas.addEventListener('click', jump);
+
+        // Check if selfie exists, otherwise show message
+        if (!selfieData) {
+            alert('No selfie found! Redirecting to take a selfie...');
+            window.location.href = 'index.html';
+        }
 
         // Start game loop
         gameLoop();
