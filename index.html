@@ -3,341 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flappy Selfie Game</title>
+    <title>Flappy Selfie</title>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(to bottom, #4ec0ca 0%, #87ceeb 100%);
-            font-family: 'Arial', sans-serif;
-        }
-        canvas {
-            border: 3px solid #333;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            background: #4ec0ca;
-        }
-        #gameInfo {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
             color: white;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
-        #score {
+
+        .container {
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+        }
+
+        h1 {
             font-size: 48px;
-            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
         }
-        #instructions {
-            font-size: 18px;
-            margin-top: 10px;
+
+        p {
+            font-size: 20px;
+            margin-bottom: 30px;
+            opacity: 0.9;
         }
-        #backBtn {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            color: #333;
+
+        #videoContainer {
+            display: none;
+            margin: 30px 0;
+        }
+
+        video {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 15px;
+            border: 4px solid white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        canvas {
+            display: none;
+        }
+
+        button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 25px;
+            padding: 18px 40px;
+            font-size: 20px;
+            border-radius: 50px;
             cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
             font-weight: bold;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin: 10px;
         }
-        #backBtn:hover {
-            background: white;
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #preview {
+            display: none;
+            margin: 20px 0;
+        }
+
+        #previewImage {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 4px solid white;
+            object-fit: cover;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .emoji {
+            font-size: 60px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
-    <button id="backBtn" onclick="window.location.href='index.html'">← Back</button>
-    <div id="gameInfo">
-        <div id="score">0</div>
-        <div id="instructions">Press SPACE or Click to Flap</div>
+    <div class="container">
+        <div class="emoji">🐦📸</div>
+        <h1>Flappy Selfie!</h1>
+        <p>Upload a picture and become the bird in Flappy Bird!</p>
+        
+        <div class="instructions">
+            <p>Click the button below to upload any image. Your picture will replace the bird in the game!</p>
+        </div>
+
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        <button id="uploadBtn">📤 Upload Picture</button>
+        
+        <canvas id="canvas" style="display: none;"></canvas>
+
+        <div id="preview">
+            <p style="margin-bottom: 15px;">Your Flappy Face:</p>
+            <img id="previewImage" alt="Your selfie">
+            <br><br>
+            <button id="playBtn">🎮 Play Game!</button>
+        </div>
     </div>
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInput = document.getElementById('fileInput');
+        const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
-        const scoreDisplay = document.getElementById('score');
-        const instructionsDisplay = document.getElementById('instructions');
+        const preview = document.getElementById('preview');
+        const previewImage = document.getElementById('previewImage');
+        const playBtn = document.getElementById('playBtn');
 
-        // Load selfie image
-        const selfieData = localStorage.getItem('flappySelfie');
-        const selfieImage = new Image();
-        let imageLoaded = false;
+        uploadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
 
-        if (selfieData) {
-            selfieImage.onload = () => {
-                imageLoaded = true;
-            };
-            selfieImage.src = selfieData;
-        }
-
-        // Game variables
-        let bird = {
-            x: 150,
-            y: 250,
-            size: 50, // Size for circular selfie
-            gravity: 0.6,
-            velocity: 0,
-            jump: -10
-        };
-
-        let pipes = [];
-        let score = 0;
-        let gameOver = false;
-        let gameStarted = false;
-        let frameCount = 0;
-
-        const pipeWidth = 80;
-        const pipeGap = 200;
-        const pipeSpeed = 2;
-
-        // Colors
-        const pipeColor = '#6ab04c';
-        const pipeBorder = '#4a7c3a';
-
-        // Create initial pipes
-        function createPipe() {
-            const minHeight = 50;
-            const maxHeight = canvas.height - pipeGap - minHeight - 100;
-            const height = Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
-            
-            pipes.push({
-                x: canvas.width,
-                top: height,
-                bottom: height + pipeGap,
-                scored: false
-            });
-        }
-
-        // Draw bird (with selfie or default)
-        function drawBird() {
-            ctx.save();
-            
-            if (imageLoaded) {
-                // Draw circular selfie
-                ctx.beginPath();
-                ctx.arc(bird.x + bird.size/2, bird.y + bird.size/2, bird.size/2, 0, Math.PI * 2);
-                ctx.closePath();
-                ctx.clip();
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
                 
-                // Draw the selfie image
-                ctx.drawImage(selfieImage, bird.x, bird.y, bird.size, bird.size);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Set canvas size
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        
+                        // Draw image to canvas
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // Get image data
+                        const imageData = canvas.toDataURL('image/png');
+                        
+                        // Show preview
+                        previewImage.src = imageData;
+                        preview.style.display = 'block';
+                        
+                        // Store image in localStorage for game to use
+                        localStorage.setItem('flappySelfie', imageData);
+                    };
+                    img.src = event.target.result;
+                };
                 
-                ctx.restore();
-                
-                // Draw border around selfie
-                ctx.beginPath();
-                ctx.arc(bird.x + bird.size/2, bird.y + bird.size/2, bird.size/2, 0, Math.PI * 2);
-                ctx.strokeStyle = '#FFD700';
-                ctx.lineWidth = 3;
-                ctx.stroke();
+                reader.readAsDataURL(file);
             } else {
-                // Fallback to default bird
-                ctx.fillStyle = '#FFD700';
-                ctx.fillRect(bird.x, bird.y, bird.size, bird.size * 0.7);
-                
-                // Eye
-                ctx.fillStyle = 'white';
-                ctx.fillRect(bird.x + 30, bird.y + 8, 12, 12);
-                ctx.fillStyle = 'black';
-                ctx.fillRect(bird.x + 34, bird.y + 11, 6, 6);
-                
-                // Beak
-                ctx.fillStyle = '#FF6347';
-                ctx.fillRect(bird.x + 50, bird.y + 15, 9, 6);
-            }
-        }
-
-        // Draw pipes
-        function drawPipes() {
-            pipes.forEach(pipe => {
-                // Top pipe
-                ctx.fillStyle = pipeColor;
-                ctx.fillRect(pipe.x, 0, pipeWidth, pipe.top);
-                ctx.strokeStyle = pipeBorder;
-                ctx.lineWidth = 3;
-                ctx.strokeRect(pipe.x, 0, pipeWidth, pipe.top);
-                
-                // Pipe cap (top)
-                ctx.fillRect(pipe.x - 5, pipe.top - 20, pipeWidth + 10, 20);
-                ctx.strokeRect(pipe.x - 5, pipe.top - 20, pipeWidth + 10, 20);
-                
-                // Bottom pipe
-                ctx.fillStyle = pipeColor;
-                ctx.fillRect(pipe.x, pipe.bottom, pipeWidth, canvas.height - pipe.bottom);
-                ctx.strokeRect(pipe.x, pipe.bottom, pipeWidth, canvas.height - pipe.bottom);
-                
-                // Pipe cap (bottom)
-                ctx.fillRect(pipe.x - 5, pipe.bottom, pipeWidth + 10, 20);
-                ctx.strokeRect(pipe.x - 5, pipe.bottom, pipeWidth + 10, 20);
-            });
-        }
-
-        // Draw ground
-        function drawGround() {
-            ctx.fillStyle = '#DEB887';
-            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
-            ctx.strokeStyle = '#8B7355';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(0, canvas.height - 50, canvas.width, 50);
-        }
-
-        // Update game
-        function update() {
-            if (!gameStarted || gameOver) return;
-
-            // Bird physics
-            bird.velocity += bird.gravity;
-            bird.y += bird.velocity;
-
-            // Move pipes
-            pipes.forEach(pipe => {
-                pipe.x -= pipeSpeed;
-                
-                // Score when passing pipe
-                if (!pipe.scored && pipe.x + pipeWidth < bird.x) {
-                    score++;
-                    pipe.scored = true;
-                    scoreDisplay.textContent = score;
-                }
-            });
-
-            // Remove off-screen pipes
-            pipes = pipes.filter(pipe => pipe.x + pipeWidth > 0);
-
-            // Create new pipes
-            if (frameCount % 90 === 0) {
-                createPipe();
-            }
-
-            // Check collisions (circular collision for selfie)
-            pipes.forEach(pipe => {
-                const birdCenterX = bird.x + bird.size / 2;
-                const birdCenterY = bird.y + bird.size / 2;
-                const birdRadius = bird.size / 2;
-
-                // Check if bird circle overlaps with pipe rectangle
-                if (birdCenterX + birdRadius > pipe.x && birdCenterX - birdRadius < pipe.x + pipeWidth) {
-                    if (birdCenterY - birdRadius < pipe.top || birdCenterY + birdRadius > pipe.bottom) {
-                        endGame();
-                    }
-                }
-            });
-
-            // Hit ground or ceiling
-            if (bird.y + bird.size > canvas.height - 50 || bird.y < 0) {
-                endGame();
-            }
-
-            frameCount++;
-        }
-
-        // Draw everything
-        function draw() {
-            // Clear canvas
-            ctx.fillStyle = '#4ec0ca';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            drawPipes();
-            drawBird();
-            drawGround();
-
-            // Game over screen
-            if (gameOver) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                ctx.fillStyle = 'white';
-                ctx.font = 'bold 48px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 50);
-                
-                ctx.font = '24px Arial';
-                ctx.fillText('Score: ' + score, canvas.width / 2, canvas.height / 2);
-                ctx.fillText('Press SPACE to Restart', canvas.width / 2, canvas.height / 2 + 50);
-            }
-
-            // Start screen
-            if (!gameStarted && !gameOver) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                ctx.fillStyle = 'white';
-                ctx.font = 'bold 36px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('FLAPPY SELFIE', canvas.width / 2, canvas.height / 2 - 50);
-                
-                ctx.font = '20px Arial';
-                ctx.fillText('Press SPACE or Click to Start', canvas.width / 2, canvas.height / 2 + 20);
-            }
-        }
-
-        // Game loop
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Jump
-        function jump() {
-            if (!gameStarted) {
-                gameStarted = true;
-                instructionsDisplay.style.display = 'none';
-                createPipe();
-            } else if (gameOver) {
-                resetGame();
-            } else {
-                bird.velocity = bird.jump;
-            }
-        }
-
-        // End game
-        function endGame() {
-            gameOver = true;
-        }
-
-        // Reset game
-        function resetGame() {
-            bird.y = 250;
-            bird.velocity = 0;
-            pipes = [];
-            score = 0;
-            gameOver = false;
-            gameStarted = true;
-            frameCount = 0;
-            scoreDisplay.textContent = '0';
-            createPipe();
-        }
-
-        // Event listeners
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space') {
-                e.preventDefault();
-                jump();
+                alert('Please select a valid image file!');
             }
         });
 
-        canvas.addEventListener('click', jump);
-
-        // Check if selfie exists, otherwise show message
-        if (!selfieData) {
-            alert('No selfie found! Redirecting to take a selfie...');
-            window.location.href = 'index.html';
-        }
-
-        // Start game loop
-        gameLoop();
+        playBtn.addEventListener('click', () => {
+            window.location.href = 'game.html';
+        });
     </script>
 </body>
 </html>
